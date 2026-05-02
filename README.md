@@ -28,14 +28,14 @@ The demo uses a star schema modeled after **SAP MM (Materials Management)** purc
 ### Prerequisites
 
 - Access to a Databricks workspace with a **SQL Warehouse** (Serverless recommended)
-- Permission to create a catalog (`sap_purchasing_demo`)
+- Access to the workspace catalog (defaults to `classic_stable_4rp118_catalog`)
 
 ### Step 1: Run the ETL Notebook
 
 1. Open **`01_etl_sap_purchasing`** in the Databricks workspace
 2. Attach to a **SQL Warehouse** (Serverless recommended) or an all-purpose cluster
 3. Click **Run All** or run cells top-to-bottom
-4. This creates the catalog, schema, all tables, generates synthetic data, and runs the optimization pipeline
+4. This creates the schema, all tables, generates synthetic data, and runs the optimization pipeline
 
 **Expected runtime:** ~2-5 minutes
 
@@ -88,7 +88,7 @@ After running queries in notebook 2, click the **Query Profile** icon to observe
 To remove all demo objects:
 
 ```sql
-DROP CATALOG IF EXISTS sap_purchasing_demo CASCADE;
+DROP SCHEMA IF EXISTS classic_stable_4rp118_catalog.sap_purchasing_gold CASCADE;
 ```
 
 ## References

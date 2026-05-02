@@ -41,11 +41,10 @@
 
 -- COMMAND ----------
 
--- Use a dedicated schema for the demo
-CREATE CATALOG IF NOT EXISTS sap_purchasing_demo;
-USE CATALOG sap_purchasing_demo;
-CREATE SCHEMA IF NOT EXISTS gold;
-USE SCHEMA gold;
+-- Use the workspace catalog and create a dedicated schema for the demo
+USE CATALOG classic_stable_4rp118_catalog;
+CREATE SCHEMA IF NOT EXISTS sap_purchasing_gold;
+USE SCHEMA sap_purchasing_gold;
 
 -- COMMAND ----------
 

@@ -19,8 +19,8 @@
 
 -- COMMAND ----------
 
-USE CATALOG sap_purchasing_demo;
-USE SCHEMA gold;
+USE CATALOG classic_stable_4rp118_catalog;
+USE SCHEMA sap_purchasing_gold;
 
 -- COMMAND ----------
 
