@@ -326,21 +326,32 @@ ORDER BY total DESC;
 -- COMMAND ----------
 
 -- Three-way match analysis: PO → Goods Receipt → Invoice
--- Using pipe syntax for readability
+-- Pipe syntax version (requires DBR 16.1+ / Serverless SQL Warehouse):
+--   FROM fact_purchase_orders po
+--     |> WHERE status = 'Closed' AND date_key >= 20240101
+--     |> JOIN fact_goods_receipts gr ON po.po_number = gr.po_number
+--     |> JOIN fact_invoices inv ON po.po_number = inv.po_number
+--     |> JOIN dim_vendor v ON po.vendor_key = v.vendor_key
+--     |> AGGREGATE count(DISTINCT po.po_number) AS matched_pos, ...
+--     |> ORDER BY abs(variance) DESC
+
+-- Standard SQL equivalent:
+SELECT
+  v.vendor_group,
+  v.country,
+  count(DISTINCT po.po_number)                        AS matched_pos,
+  sum(po.net_value)                                    AS po_value,
+  sum(inv.invoice_amount)                              AS invoice_value,
+  sum(inv.invoice_amount) - sum(po.net_value)          AS variance
 FROM fact_purchase_orders po
-  |> WHERE status = 'Closed' AND date_key >= 20240101
-  |> JOIN fact_goods_receipts gr ON po.po_number = gr.po_number
-  |> JOIN fact_invoices inv ON po.po_number = inv.po_number
-  |> JOIN dim_vendor v ON po.vendor_key = v.vendor_key
-  |> AGGREGATE
-       count(DISTINCT po.po_number) AS matched_pos,
-       sum(po.net_value)            AS po_value,
-       sum(inv.invoice_amount)      AS invoice_value,
-       sum(inv.invoice_amount) - sum(po.net_value) AS variance
-     GROUP BY v.vendor_group, v.country
-  |> WHERE abs(variance) > 10000
-  |> ORDER BY abs(variance) DESC
-  |> LIMIT 20;
+JOIN fact_goods_receipts gr ON po.po_number = gr.po_number
+JOIN fact_invoices inv ON po.po_number = inv.po_number
+JOIN dim_vendor v ON po.vendor_key = v.vendor_key
+WHERE po.status = 'Closed' AND po.date_key >= 20240101
+GROUP BY v.vendor_group, v.country
+HAVING abs(sum(inv.invoice_amount) - sum(po.net_value)) > 10000
+ORDER BY abs(variance) DESC
+LIMIT 20;
 
 -- COMMAND ----------
 
@@ -351,12 +362,8 @@ FROM fact_purchase_orders po
 
 -- COMMAND ----------
 
--- Check table sizes, file counts, and clustering status
-SELECT 'fact_purchase_orders' AS tbl, * FROM (DESCRIBE DETAIL fact_purchase_orders)
-UNION ALL
-SELECT 'fact_goods_receipts', * FROM (DESCRIBE DETAIL fact_goods_receipts)
-UNION ALL
-SELECT 'fact_invoices', * FROM (DESCRIBE DETAIL fact_invoices);
+-- Check table size, file count, and clustering status for fact_purchase_orders
+DESCRIBE DETAIL fact_purchase_orders;
 
 -- COMMAND ----------
 
@@ -365,19 +372,12 @@ DESCRIBE EXTENDED fact_purchase_orders date_key;
 
 -- COMMAND ----------
 
--- Identify tables with high small-file counts that need OPTIMIZE
--- (In production, query system.access.table_lineage or system.billing for deeper insights)
-SELECT
-  'fact_purchase_orders' AS table_name,
-  numFiles AS file_count,
-  round(sizeInBytes / 1024 / 1024, 2) AS size_mb
-FROM (DESCRIBE DETAIL fact_purchase_orders)
-UNION ALL
-SELECT 'fact_goods_receipts', numFiles, round(sizeInBytes / 1024 / 1024, 2)
-FROM (DESCRIBE DETAIL fact_goods_receipts)
-UNION ALL
-SELECT 'fact_invoices', numFiles, round(sizeInBytes / 1024 / 1024, 2)
-FROM (DESCRIBE DETAIL fact_invoices);
+-- Check goods receipts and invoices table details
+DESCRIBE DETAIL fact_goods_receipts;
+
+-- COMMAND ----------
+
+DESCRIBE DETAIL fact_invoices;
 
 -- COMMAND ----------
 

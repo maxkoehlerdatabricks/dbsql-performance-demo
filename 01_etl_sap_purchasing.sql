@@ -79,7 +79,7 @@ CREATE OR REPLACE TABLE dim_vendor (
                 COMMENT 'Account group (KTOKK) — e.g. Raw Material, MRO, Services, Packaging',
   payment_terms STRING
                 COMMENT 'Payment terms key (ZTERM)',
-  is_active     BOOLEAN DEFAULT TRUE
+  is_active     BOOLEAN
                 COMMENT 'Active flag for SCD Type 1',
   CONSTRAINT pk_vendor PRIMARY KEY (vendor_key)
 )
@@ -89,7 +89,7 @@ COMMENT 'Vendor master dimension — sourced from SAP LFA1. Clustered by PK + ve
 -- COMMAND ----------
 
 -- Generate 200 realistic SAP vendors
-INSERT INTO dim_vendor (vendor_id, vendor_name, country, city, vendor_group, payment_terms)
+INSERT INTO dim_vendor (vendor_id, vendor_name, country, city, vendor_group, payment_terms, is_active)
 SELECT
   concat('V', lpad(cast(id as STRING), 6, '0'))                                      AS vendor_id,
   concat(
@@ -122,7 +122,8 @@ SELECT
   END                                                                                  AS vendor_group,
   CASE mod(id, 3)
     WHEN 0 THEN 'NET30' WHEN 1 THEN 'NET60' ELSE 'NET90'
-  END                                                                                  AS payment_terms
+  END                                                                                  AS payment_terms,
+  true                                                                                   AS is_active
 FROM (SELECT explode(sequence(1, 200)) AS id);
 
 -- COMMAND ----------
@@ -329,7 +330,7 @@ CREATE OR REPLACE TABLE fact_purchase_orders (
   quantity        DECIMAL(13,3)      COMMENT 'Order quantity (MENGE)',
   net_price       DECIMAL(18,2)      COMMENT 'Net price per unit (NETPR)',
   net_value       DECIMAL(18,2)      COMMENT 'Net order value (NETWR = quantity × net_price)',
-  currency        STRING DEFAULT 'USD' COMMENT 'Currency key (WAERS)',
+  currency        STRING COMMENT 'Currency key (WAERS)',
   po_type         STRING             COMMENT 'PO type (BSART) — NB/FO/UB/ZNB',
   status          STRING             COMMENT 'PO status — Open/Partially Delivered/Closed',
   CONSTRAINT fk_po_vendor    FOREIGN KEY (vendor_key)    REFERENCES dim_vendor(vendor_key),
@@ -449,7 +450,7 @@ CREATE OR REPLACE TABLE fact_invoices (
   date_key         INT NOT NULL       COMMENT 'FK → dim_date (invoice posting date)',
   invoice_amount   DECIMAL(18,2)      COMMENT 'Invoice gross amount',
   tax_amount       DECIMAL(18,2)      COMMENT 'Tax amount',
-  currency         STRING DEFAULT 'USD' COMMENT 'Currency key (WAERS)',
+  currency         STRING COMMENT 'Currency key (WAERS)',
   payment_status   STRING             COMMENT 'Paid/Pending/Overdue/Blocked',
   payment_block    STRING             COMMENT 'Payment block reason (ZLSPR)',
   CONSTRAINT fk_inv_vendor FOREIGN KEY (vendor_key) REFERENCES dim_vendor(vendor_key)
